@@ -67,8 +67,7 @@ namespace database {
 
 		MyResult Connect();
 		void Connect(const std::function<void(const MyResult&)>& connect_callback);
-
-
+		
 		MyResult Query(const std::string& sql, MYSQL_RES** result, my_ulonglong& rows);
 		void Query(const std::string& sql, const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback);
 
@@ -76,6 +75,15 @@ namespace database {
 		void StatementQuery(const std::string& sql, const std::function<void(MYSQL_STMT*, MyResult&)>& bind_param, const std::function<void(MYSQL_STMT*, MyResult&)>& bind_result, const std::function<void(MYSQL_STMT*, my_ulonglong, const MyResult&)>& callback);
 		MyResult StatementExecute(const std::string& sql, MYSQL_STMT** stmt, my_ulonglong& rows, const std::function<void(MYSQL_STMT*, MyResult&)>& bind_param);
 		void StatementExecute(const std::string& sql, const std::function<void(MYSQL_STMT*, MyResult&)>& bind_param, const std::function<void(MYSQL_STMT*, my_ulonglong, const MyResult&)>& callback);
+
+		MyResult BeginTransaction();
+		void BeginTransaction(const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback);
+
+		MyResult CommitTransaction();
+		void CommitTransaction(const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback);
+
+		MyResult RollbackTransaction();
+		void RollbackTransaction(const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback);
 
 		void Disconnect();
 
