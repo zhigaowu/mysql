@@ -59,7 +59,7 @@ database::MySQL::MyResult database::MySQL::Connect()
 			_password.c_str(),          /* password */
 			_database.c_str(),          /* default database to use, NULL for none */
 			_port,                      /* port number, 0 for default */
-			NULL,                       /* socket file or named pipe name */
+			nullptr,                    /* socket file or named pipe name */
 			CLIENT_FOUND_ROWS           /* connection flags */))
 		{
 			mysql_error_result(res, _mysql);
@@ -245,6 +245,72 @@ void database::MySQL::StatementExecute(const std::string& sql, const std::functi
 	{
 		std::unique_lock<std::mutex> lg(_operations_locker);
 		_operations.emplace_back(sql, bind_param, nullptr, callback);
+		_operations_condition.notify_one();
+	}
+}
+
+database::MySQL::MyResult database::MySQL::BeginTransaction()
+{
+	MyResult res;
+	// begin transaction
+	if ((res.error_no = mysql_real_query(_mysql, "begin", static_cast<unsigned long>(5))) != 0)
+	{
+		mysql_error_result(res, _mysql);
+	}
+
+	return res;
+}
+
+void database::MySQL::BeginTransaction(const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback)
+{
+	if (_running)
+	{
+		std::unique_lock<std::mutex> lg(_operations_locker);
+		_operations.emplace_back("begin", callback);
+		_operations_condition.notify_one();
+	}
+}
+
+database::MySQL::MyResult database::MySQL::CommitTransaction()
+{
+	MyResult res;
+	// commit transaction
+	if ((res.error_no = mysql_real_query(_mysql, "commit", static_cast<unsigned long>(6))) != 0)
+	{
+		mysql_error_result(res, _mysql);
+	}
+
+	return res;
+}
+
+void database::MySQL::CommitTransaction(const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback)
+{
+	if (_running)
+	{
+		std::unique_lock<std::mutex> lg(_operations_locker);
+		_operations.emplace_back("commit", callback);
+		_operations_condition.notify_one();
+	}
+}
+
+database::MySQL::MyResult database::MySQL::RollbackTransaction()
+{
+	MyResult res;
+	// rollback transaction
+	if ((res.error_no = mysql_real_query(_mysql, "rollback", static_cast<unsigned long>(8))) != 0)
+	{
+		mysql_error_result(res, _mysql);
+	}
+
+	return res;
+}
+
+void database::MySQL::RollbackTransaction(const std::function<void(MYSQL_RES*, my_ulonglong, const MyResult&)>& callback)
+{
+	if (_running)
+	{
+		std::unique_lock<std::mutex> lg(_operations_locker);
+		_operations.emplace_back("rollback", callback);
 		_operations_condition.notify_one();
 	}
 }
