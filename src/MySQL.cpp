@@ -318,9 +318,9 @@ void database::MySQL::RollbackTransaction(const std::function<void(MYSQL_RES*, m
 void database::MySQL::Disconnect()
 {
 	_running = false;
+	_operations_condition.notify_one();
 	if (_worker.joinable())
 	{
-		_operations_condition.notify_one();
 		_worker.join();
 	}
 
